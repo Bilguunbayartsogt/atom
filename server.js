@@ -38,16 +38,32 @@ app.get("/habit", (req, res) => {
 	res.sendFile(path.join(__dirname, "pages", "add-habit.html"));
 });
 
+app.get("/sign-up", (req, res) => {
+	res.sendFile(path.join(__dirname, "pages", "sign-up.html"));
+});
+
 // API endpoints
 app.post("/submit", async (req, res) => {
-	const { name, lastName, age } = req.body;
+	const { first_name, last_name, user_name, password } = req.body;
 
 	try {
-		const query =
-			"INSERT INTO info_table (first_name, last_name, age) VALUES ($1, $2, $3)";
-		await client.query(query, [name, lastName, age]);
+		await client.query("BEGIN"); // Start transaction
+
+		// Insert into users table and get the user_id
+		const userQuery =
+			"INSERT INTO users (first_name, last_name) VALUES ($1, $2) RETURNING user_id";
+		const userResult = await client.query(userQuery, [first_name, last_name]);
+		const userId = userResult.rows[0].user_id;
+
+		// Insert into auth table using the user_id from users table
+		const authQuery =
+			"INSERT INTO auth (user_id, user_name, password) VALUES ($1, $2, $3)";
+		await client.query(authQuery, [userId, user_name, password]);
+
+		await client.query("COMMIT");
 		res.json({ success: true });
 	} catch (err) {
+		await client.query("ROLLBACK");
 		console.error(err);
 		res.status(500).json({ error: "Failed to insert data" });
 	}
@@ -55,7 +71,7 @@ app.post("/submit", async (req, res) => {
 
 app.get("/api/users", async (req, res) => {
 	try {
-		const result = await client.query("SELECT * FROM info_table");
+		const result = await client.query("SELECT * FROM users");
 		res.json(result.rows);
 	} catch (err) {
 		console.error(err);

@@ -9,7 +9,6 @@ async function displayUsers() {
 				(user) => `
             <div class="user">
                 <h2>${user.first_name} ${user.last_name}</h2>
-                <p>Age: ${user.age}</p>
             </div>
         `
 			)
